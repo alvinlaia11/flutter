@@ -41,5 +41,6 @@ class _MyHomeState extends State<MyHome> {
     );
   }
 }
+https://api.openweathermap.org/data/2.5/weather?q=Medan&appid=YOUR_API_KEY
 
 https://api.openweathermap.org/data/2.5/weather?q=nama-kota&appid=YOUR_API_KEY
