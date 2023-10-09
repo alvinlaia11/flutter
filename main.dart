@@ -1,16 +1,17 @@
 import 'package:http/http.dart' as http;
-import 'dart:io';
 
 class HttpHelper {
-  final String _urlKey = "?api_key=e074f9ca65bc00321b22666bc51130c9";
-  final String _urlBase = "https://api.openweathermap.org/data/2.5/weather?";
-  Future<String> getMovie() async {
-    var url = Uri.parse(_urlBase + '/3/movie/now_playing' + _urlKey);
-    http.Response result = await http.get(url);
-    if (result.statusCode == HttpStatus.ok) {
-      String responseBody = result.body;
-      return responseBody;
+  final String _apiKey = "YOUR_API_KEY"; // Ganti dengan kunci API Anda
+  final String _baseUrl = "https://api.openweathermap.org/data/2.5/weather";
+
+  Future<String> getWeatherData(String cityName) async {
+    final Uri uri = Uri.parse('$_baseUrl?q=$cityName&appid=$_apiKey');
+    final http.Response response = await http.get(uri);
+
+    if (response.statusCode == 200) {
+      return response.body; // Ini akan berisi data cuaca dalam format JSON.
+    } else {
+      throw Exception('Failed to fetch weather data');
     }
-    return result.statusCode.toString();
   }
 }
