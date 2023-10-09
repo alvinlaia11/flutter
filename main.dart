@@ -1,1 +1,73 @@
-{"coord":{"lon":98.6667,"lat":3.5833},"weather":[{"id":802,"main":"Clouds","description":"scattered clouds","icon":"03d"}],"base":"stations","main":{"temp":30.57,"feels_like":37.57,"temp_min":30.57,"temp_max":31.02,"pressure":1011,"humidity":74},"visibility":10000,"wind":{"speed":4.63,"deg":330},"clouds":{"all":40},"dt":1696834765,"sys":{"type":2,"id":2000331,"country":"ID","sunrise":1696806649,"sunset":1696850068},"timezone":25200,"id":1214520,"name":"Medan","cod":200}
+import 'package:basic/components/htpHelper.dart';
+import 'package:flutter/material.dart';
+
+class MyHome extends StatefulWidget {
+  const MyHome({super.key});
+
+  @override
+  State<MyHome> createState() => _MyHomeState();
+}
+
+class _MyHomeState extends State<MyHome> {
+  late String result;
+  late HttpHelper helper;
+  double temperature = 0.0; // Suhu default, Anda dapat menggantinya sesuai data yang diterima.
+
+  @override
+  void initState() {
+    super.initState();
+    helper = HttpHelper();
+    result = "";
+    fetchData(); // Panggil method untuk mengambil data cuaca.
+  }
+
+  Future<void> fetchData() async {
+    final weatherData = await helper.getWeatherData("Medan"); // Ganti "NamaKota" dengan "Medan"
+    setState(() {
+      result = weatherData;
+      temperature = parseTemperature(weatherData);
+    });
+  }
+
+  Color getColorBasedOnTemperature(double temperature) {
+    if (temperature < 20) {
+      return Colors.green; // Suhu rendah, warna hijau.
+    } else if (temperature >= 20 && temperature < 30) {
+      return Colors.yellow; // Suhu sedang, warna kuning.
+    } else {
+      return Colors.red; // Suhu tinggi, warna merah.
+    }
+  }
+
+  double parseTemperature(String jsonData) {
+    final data = json.decode(jsonData);
+    final temp = data['main']['temp'];
+    return temp.toDouble();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final temperatureColor = getColorBasedOnTemperature(temperature);
+
+    return Scaffold(
+      appBar: AppBar(title: Text('Weather Data')),
+      body: SingleChildScrollView(
+        child: Center(
+          child: Container(
+            width: 100,
+            height: 100,
+            color: temperatureColor,
+            child: Center(
+              child: result.isEmpty
+                  ? CircularProgressIndicator()
+                  : Text(
+                      '$temperature °C', // Menampilkan suhu dalam kotak.
+                      style: TextStyle(color: Colors.white),
+                    ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
