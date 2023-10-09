@@ -1,17 +1,43 @@
-import 'package:http/http.dart' as http;
+import 'package:basic/components/htpHelper.dart';
+import 'package:flutter/material.dart';
 
-class HttpHelper {
-  final String _apiKey = "YOUR_API_KEY"; // Ganti dengan kunci API Anda
-  final String _baseUrl = "https://api.openweathermap.org/data/2.5/weather";
+class MyHome extends StatefulWidget {
+  const MyHome({super.key});
 
-  Future<String> getWeatherData(String cityName) async {
-    final Uri uri = Uri.parse('$_baseUrl?q=$cityName&appid=$_apiKey');
-    final http.Response response = await http.get(uri);
+  @override
+  State<MyHome> createState() => _MyHomeState();
+}
 
-    if (response.statusCode == 200) {
-      return response.body; // Ini akan berisi data cuaca dalam format JSON.
-    } else {
-      throw Exception('Failed to fetch weather data');
-    }
+class _MyHomeState extends State<MyHome> {
+  late String result;
+  late HttpHelper helper;
+
+  @override
+  void initState() {
+    super.initState();
+    helper = HttpHelper();
+    result = "";
+    fetchData(); // Panggil method untuk mengambil data cuaca.
+  }
+
+  Future<void> fetchData() async {
+    final weatherData = await helper.getWeatherData("NamaKota");
+    setState(() {
+      result = weatherData;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text('Weather Data')),
+      body: SingleChildScrollView(
+        child: Center(
+          child: result.isEmpty
+              ? CircularProgressIndicator() // Tampilkan loading jika result masih kosong
+              : Text(result), // Tampilkan data cuaca jika sudah tersedia
+        ),
+      ),
+    );
   }
 }
