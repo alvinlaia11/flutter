@@ -11,26 +11,38 @@ class MyHome extends StatefulWidget {
 }
 
 class _MyHomeState extends State<MyHome> {
-  late String result;
   late HttpHelper helper;
-  double temperature =
-      0.0; // Suhu default, Anda dapat menggantinya sesuai data yang diterima.
+  String resultMedan = "";
+  String resultJakarta = "";
+  double temperatureMedan = 0.0;
+  double temperatureJakarta = 0.0;
 
   @override
   void initState() {
     super.initState();
     helper = HttpHelper();
-    result = "";
     fetchData(); // Panggil method untuk mengambil data cuaca.
   }
 
   Future<void> fetchData() async {
-    final weatherData =
-        await helper.getWeatherData("Medan"); // Ganti "NamaKota" dengan "Medan"
+    final weatherDataMedan =
+        await helper.getWeatherData("Medan");
+    final weatherDataJakarta =
+        await helper.getWeatherData("Jakarta");
+
     setState(() {
-      result = weatherData;
-      temperature = parseTemperature(weatherData);
+      resultMedan = weatherDataMedan;
+      resultJakarta = weatherDataJakarta;
+
+      temperatureMedan = parseTemperature(resultMedan);
+      temperatureJakarta = parseTemperature(resultJakarta);
     });
+  }
+
+  double parseTemperature(String jsonData) {
+    final data = json.decode(jsonData);
+    final temp = data['main']['temp'];
+    return temp.toDouble();
   }
 
   Color getColorBasedOnTemperature(double temperature) {
@@ -43,33 +55,45 @@ class _MyHomeState extends State<MyHome> {
     }
   }
 
-  double parseTemperature(String jsonData) {
-    final data = json.decode(jsonData);
-    final temp = data['main']['temp'];
-    return temp.toDouble();
-  }
-
   @override
   Widget build(BuildContext context) {
-    final temperatureColor = getColorBasedOnTemperature(temperature);
+    final temperatureColorMedan = getColorBasedOnTemperature(temperatureMedan);
+    final temperatureColorJakarta =
+        getColorBasedOnTemperature(temperatureJakarta);
 
     return Scaffold(
       appBar: AppBar(title: Text('Weather Data')),
       body: SingleChildScrollView(
-        child: Center(
-          child: Container(
-            width: 100,
-            height: 100,
-            color: temperatureColor,
-            child: Center(
-              child: result.isEmpty
-                  ? CircularProgressIndicator()
-                  : Text(
-                      '$temperature °C', // Menampilkan suhu dalam kotak.
-                      style: TextStyle(color: Colors.white),
-                    ),
+        child: Column(
+          children: [
+            Container(
+              width: 100,
+              height: 100,
+              color: temperatureColorMedan,
+              child: Center(
+                child: resultMedan.isEmpty
+                    ? CircularProgressIndicator()
+                    : Text(
+                        '$temperatureMedan °C',
+                        style: TextStyle(color: Colors.white),
+                      ),
+              ),
             ),
-          ),
+            SizedBox(height: 20), // Spasi antara dua kota
+            Container(
+              width: 100,
+              height: 100,
+              color: temperatureColorJakarta,
+              child: Center(
+                child: resultJakarta.isEmpty
+                    ? CircularProgressIndicator()
+                    : Text(
+                        '$temperatureJakarta °C',
+                        style: TextStyle(color: Colors.white),
+                      ),
+              ),
+            ),
+          ],
         ),
       ),
     );
