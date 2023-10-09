@@ -1,73 +1,21 @@
-import 'package:basic/components/htpHelper.dart';
-import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 
-class MyHome extends StatefulWidget {
-  const MyHome({super.key});
+class HttpHelper {
+  final String _apiKey =
+      "439d4b804bc8187953eb36d2a8c26a02"; // Ganti dengan kunci API Anda
+  final String _baseUrl =
+      "https://openweathermap.org/data/2.5/weather?id=1214520&appid=439d4b804bc8187953eb36d2a8c26a02";
+      
+      
 
-  @override
-  State<MyHome> createState() => _MyHomeState();
-}
+  Future<String> getWeatherData(String cityName) async {
+    final Uri uri = Uri.parse('$_baseUrl?q=$cityName&appid=$_apiKey');
+    final http.Response response = await http.get(uri);
 
-class _MyHomeState extends State<MyHome> {
-  late String result;
-  late HttpHelper helper;
-  double temperature = 0.0; // Suhu default, Anda dapat menggantinya sesuai data yang diterima.
-
-  @override
-  void initState() {
-    super.initState();
-    helper = HttpHelper();
-    result = "";
-    fetchData(); // Panggil method untuk mengambil data cuaca.
-  }
-
-  Future<void> fetchData() async {
-    final weatherData = await helper.getWeatherData("Medan"); // Ganti "NamaKota" dengan "Medan"
-    setState(() {
-      result = weatherData;
-      temperature = parseTemperature(weatherData);
-    });
-  }
-
-  Color getColorBasedOnTemperature(double temperature) {
-    if (temperature < 20) {
-      return Colors.green; // Suhu rendah, warna hijau.
-    } else if (temperature >= 20 && temperature < 30) {
-      return Colors.yellow; // Suhu sedang, warna kuning.
+    if (response.statusCode == 200) {
+      return response.body; // Ini akan berisi data cuaca dalam format JSON.
     } else {
-      return Colors.red; // Suhu tinggi, warna merah.
+      throw Exception('Failed to fetch weather data');
     }
-  }
-
-  double parseTemperature(String jsonData) {
-    final data = json.decode(jsonData);
-    final temp = data['main']['temp'];
-    return temp.toDouble();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final temperatureColor = getColorBasedOnTemperature(temperature);
-
-    return Scaffold(
-      appBar: AppBar(title: Text('Weather Data')),
-      body: SingleChildScrollView(
-        child: Center(
-          child: Container(
-            width: 100,
-            height: 100,
-            color: temperatureColor,
-            child: Center(
-              child: result.isEmpty
-                  ? CircularProgressIndicator()
-                  : Text(
-                      '$temperature °C', // Menampilkan suhu dalam kotak.
-                      style: TextStyle(color: Colors.white),
-                    ),
-            ),
-          ),
-        ),
-      ),
-    );
   }
 }
