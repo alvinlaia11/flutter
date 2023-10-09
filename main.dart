@@ -17,19 +17,27 @@ class _MyHomeState extends State<MyHome> {
     super.initState();
     helper = HttpHelper();
     result = "";
+    fetchData(); // Panggil method untuk mengambil data cuaca.
+  }
+
+  Future<void> fetchData() async {
+    final weatherData = await helper.getWeatherData("NamaKota");
+    setState(() {
+      result = weatherData;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    helper.getWeatherData.then((value) {
-      setState(() {
-        result = value;
-      });
-    });
     return Scaffold(
-        appBar: AppBar(title: Text('My Movie')),
-        body: SingleChildScrollView(
-          child: Text("$result"),
-        ));
+      appBar: AppBar(title: Text('Weather Data')),
+      body: SingleChildScrollView(
+        child: Center(
+          child: result.isEmpty
+              ? CircularProgressIndicator() // Tampilkan loading jika result masih kosong
+              : Text(result), // Tampilkan data cuaca jika sudah tersedia
+        ),
+      ),
+    );
   }
 }
