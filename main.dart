@@ -13,12 +13,55 @@ class MyHome extends StatefulWidget {
   State<MyHome> createState() => _MyHomeState();
 }
 
-// ... (kode yang sama seperti sebelumnya)
+Future testData() async {
+  await Firebase.initializeApp();
+  print('init Done');
+  FirebaseFirestore db = await FirebaseFirestore.instance;
+  print('init Firestore Done');
+
+  await db.collection('event_detail').get().then((event) {
+    for (var doc in event.docs) {
+      print("${doc.id} => ${doc.data()}");
+    }
+  });
+}
 
 class _MyHomeState extends State<MyHome> {
   List<EventModel> details = [];
 
-  // ... (kode yang sama seperti sebelumnya)
+  Future readData() async {
+    await Firebase.initializeApp();
+    FirebaseFirestore db = await FirebaseFirestore.instance;
+    var data = await db.collection('event_detail').get();
+    setState(() {
+      details =
+          data.docs.map((doc) => EventModel.fromDocSnapshot(doc)).toList();
+    });
+  }
+
+  void addRand() async {
+    FirebaseFirestore db = await FirebaseFirestore.instance;
+    EventModel InsertData = EventModel(
+        judul: getRandString(5),
+        keterangan: getRandString(30),
+        tanggal: getRandString(10),
+        is_like: Random().nextBool(),
+        pembicara: getRandString(20));
+    DocumentReference docRef =
+        await db.collection("event_detail").add(InsertData.toMap());
+    setState(() {
+      InsertData.id = docRef.id;
+      details.add(InsertData);
+    });
+  }
+
+  void deleteLast(String documentId) async {
+    FirebaseFirestore db = await FirebaseFirestore.instance;
+    await db.collection('event_detail').doc(documentId).delete();
+    setState(() {
+      details.removeLast();
+    });
+  }
 
   void deleteSelected() async {
     FirebaseFirestore db = await FirebaseFirestore.instance;
@@ -37,7 +80,23 @@ class _MyHomeState extends State<MyHome> {
     });
   }
 
+  void updateEvent(int pos) async {
+    FirebaseFirestore db = await FirebaseFirestore.instance;
+    await db
+        .collection('event_detail')
+        .doc(details[pos].id)
+        .update({'is_like': !details[pos].is_like});
+    setState(() {
+      details[pos].is_like = !details[pos].is_like;
+    });
+  }
+
   @override
+  void initState() {
+    readData();
+    super.initState();
+  }
+
   Widget build(BuildContext context) {
     testData();
     return Scaffold(
