@@ -1,101 +1,124 @@
-import 'dart:convert';
-
-import 'package:basic/components/htpHelper.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:fab_circular_menu_plus/fab_circular_menu_plus.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'database.dart';
+import 'dart:convert';
+import 'dart:math';
 
 class MyHome extends StatefulWidget {
-  const MyHome({super.key});
+  const MyHome({Key? key}) : super(key: key);
 
   @override
   State<MyHome> createState() => _MyHomeState();
 }
 
+Future testData() async {
+  await Firebase.initializeApp();
+  print('init Done');
+  FirebaseFirestore db = await FirebaseFirestore.instance;
+  print('init Firestore Done');
+
+  await db.collection('event_detail').get().then((event) {
+    for (var doc in event.docs) {
+      print("${doc.id} => ${doc.data()}");
+    }
+  });
+}
+
+String getRandString(int len) {
+  var random = Random.secure();
+  var values = List<int>.generate(len, (i) => random.nextInt(255));
+  return base64UrlEncode(values);
+}
+
 class _MyHomeState extends State<MyHome> {
-  late HttpHelper helper;
-  String resultMedan = "";
-  String resultJakarta = "";
-  double temperatureMedan = 0.0;
-  double temperatureJakarta = 0.0;
-
-  @override
-  void initState() {
-    super.initState();
-    helper = HttpHelper();
-    fetchData(); // Panggil method untuk mengambil data cuaca.
-  }
-
-  Future<void> fetchData() async {
-    final weatherDataMedan =
-        await helper.getWeatherData("Medan");
-    final weatherDataJakarta =
-        await helper.getWeatherData("Jakarta");
-
+  List<EventModel> details = [];
+  Future readData() async {
+    await Firebase.initializeApp();
+    FirebaseFirestore db = await FirebaseFirestore.instance;
+    var data = await db.collection('event_detail').get();
     setState(() {
-      resultMedan = weatherDataMedan;
-      resultJakarta = weatherDataJakarta;
-
-      temperatureMedan = parseTemperature(resultMedan);
-      temperatureJakarta = parseTemperature(resultJakarta);
+      details =
+          data.docs.map((doc) => EventModel.fromDocSnapshot(doc)).toList();
     });
   }
 
-  double parseTemperature(String jsonData) {
-    final data = json.decode(jsonData);
-    final temp = data['main']['temp'];
-    return temp.toDouble();
+  void addRand() async {
+    FirebaseFirestore db = await FirebaseFirestore.instance;
+    EventModel InsertData = EventModel(
+        judul: getRandString(5),
+        keterangan: getRandString(30),
+        tanggal: getRandString(10),
+        is_like: Random().nextBool(),
+        pembicara: getRandString(20));
+    DocumentReference docRef =
+        await db.collection("event_detail").add(InsertData.toMap());
+    setState(() {
+      InsertData.id = docRef.id;
+      details.add(InsertData);
+    });
   }
 
-  Color getColorBasedOnTemperature(double temperature) {
-    if (temperature < 20) {
-      return Colors.green; // Suhu rendah, warna hijau.
-    } else if (temperature >= 20 && temperature < 30) {
-      return Colors.yellow; // Suhu sedang, warna kuning.
-    } else {
-      return Colors.red; // Suhu tinggi, warna merah.
-    }
+  deleteLast(String documentId) async {
+    FirebaseFirestore db = await FirebaseFirestore.instance;
+    await db.collection('event_detail').doc(documentId).delete();
+    setState(() {
+      details.removeLast();
+    });
+  }
+
+  updateEvent(int pos) async {
+    FirebaseFirestore db = await FirebaseFirestore.instance;
+    await db
+        .collection('event_detail')
+        .doc(details[pos].id)
+        .update({'is_like': !details[pos].is_like});
+    setState(() {
+      details[pos].is_like = !details[pos].is_like;
+    });
   }
 
   @override
-  Widget build(BuildContext context) {
-    final temperatureColorMedan = getColorBasedOnTemperature(temperatureMedan);
-    final temperatureColorJakarta =
-        getColorBasedOnTemperature(temperatureJakarta);
+  void initState() {
+    readData();
+    super.initState();
+  }
 
+  Widget build(BuildContext context) {
+    testData();
     return Scaffold(
-      appBar: AppBar(title: Text('Weather Data')),
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            Container(
-              width: 100,
-              height: 100,
-              color: temperatureColorMedan,
-              child: Center(
-                child: resultMedan.isEmpty
-                    ? CircularProgressIndicator()
-                    : Text(
-                        '$temperatureMedan °C',
-                        style: TextStyle(color: Colors.white),
-                      ),
-              ),
-            ),
-            SizedBox(height: 20), // Spasi antara dua kota
-            Container(
-              width: 100,
-              height: 100,
-              color: temperatureColorJakarta,
-              child: Center(
-                child: resultJakarta.isEmpty
-                    ? CircularProgressIndicator()
-                    : Text(
-                        '$temperatureJakarta °C',
-                        style: TextStyle(color: Colors.white),
-                      ),
-              ),
-            ),
-          ],
-        ),
+      appBar: AppBar(title: Text("Cloud Firestore")),
+      body: ListView.builder(
+        itemCount: details.length,
+        itemBuilder: (context, position) {
+          return CheckboxListTile(
+            value: details[position].is_like,
+            onChanged: (bool? value) {
+              updateEvent(position);
+            },
+            title: Text(details[position].judul),
+            subtitle: Text("${details[position].keterangan}" +
+                "\nHari : ${details[position].tanggal}" +
+                "\nPembicara : ${details[position].pembicara}"),
+            isThreeLine: true,
+          );
+        },
       ),
+      floatingActionButton: FabCircularMenuPlus(children: <Widget>[
+        IconButton(
+            onPressed: () {
+              addRand();
+            },
+            icon: Icon(Icons.add)),
+        IconButton(
+            onPressed: () {
+              if (details.last.id != null) {
+                deleteLast(details.last.id!);
+              }
+            },
+            icon: Icon(Icons.minimize))
+      ]),
     );
   }
 }
