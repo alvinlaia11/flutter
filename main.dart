@@ -13,78 +13,31 @@ class MyHome extends StatefulWidget {
   State<MyHome> createState() => _MyHomeState();
 }
 
-Future testData() async {
-  await Firebase.initializeApp();
-  print('init Done');
-  FirebaseFirestore db = await FirebaseFirestore.instance;
-  print('init Firestore Done');
-
-  await db.collection('event_detail').get().then((event) {
-    for (var doc in event.docs) {
-      print("${doc.id} => ${doc.data()}");
-    }
-  });
-}
-
-String getRandString(int len) {
-  var random = Random.secure();
-  var values = List<int>.generate(len, (i) => random.nextInt(255));
-  return base64UrlEncode(values);
-}
+// ... (kode yang sama seperti sebelumnya)
 
 class _MyHomeState extends State<MyHome> {
   List<EventModel> details = [];
-  Future readData() async {
-    await Firebase.initializeApp();
-    FirebaseFirestore db = await FirebaseFirestore.instance;
-    var data = await db.collection('event_detail').get();
-    setState(() {
-      details =
-          data.docs.map((doc) => EventModel.fromDocSnapshot(doc)).toList();
-    });
-  }
 
-  void addRand() async {
-    FirebaseFirestore db = await FirebaseFirestore.instance;
-    EventModel InsertData = EventModel(
-        judul: getRandString(5),
-        keterangan: getRandString(30),
-        tanggal: getRandString(10),
-        is_like: Random().nextBool(),
-        pembicara: getRandString(20));
-    DocumentReference docRef =
-        await db.collection("event_detail").add(InsertData.toMap());
-    setState(() {
-      InsertData.id = docRef.id;
-      details.add(InsertData);
-    });
-  }
+  // ... (kode yang sama seperti sebelumnya)
 
-  deleteLast(String documentId) async {
+  void deleteSelected() async {
     FirebaseFirestore db = await FirebaseFirestore.instance;
-    await db.collection('event_detail').doc(documentId).delete();
-    setState(() {
-      details.removeLast();
-    });
-  }
 
-  updateEvent(int pos) async {
-    FirebaseFirestore db = await FirebaseFirestore.instance;
-    await db
-        .collection('event_detail')
-        .doc(details[pos].id)
-        .update({'is_like': !details[pos].is_like});
+    // Filter items yang dicentang
+    List<EventModel> selectedItems = details.where((item) => item.is_like).toList();
+
+    // Hapus item yang dicentang dari Firestore
+    for (var item in selectedItems) {
+      await db.collection('event_detail').doc(item.id).delete();
+    }
+
+    // Perbarui state untuk menghilangkan item yang dicentang dari UI
     setState(() {
-      details[pos].is_like = !details[pos].is_like;
+      details.removeWhere((item) => item.is_like);
     });
   }
 
   @override
-  void initState() {
-    readData();
-    super.initState();
-  }
-
   Widget build(BuildContext context) {
     testData();
     return Scaffold(
@@ -117,7 +70,13 @@ class _MyHomeState extends State<MyHome> {
                 deleteLast(details.last.id!);
               }
             },
-            icon: Icon(Icons.minimize))
+            icon: Icon(Icons.minimize)),
+        IconButton(
+          onPressed: () {
+            deleteSelected();
+          },
+          icon: Icon(Icons.delete),
+        ),
       ]),
     );
   }
