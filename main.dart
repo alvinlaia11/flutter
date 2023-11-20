@@ -5,48 +5,6 @@ import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'dart:math';
 
-class EventModel {
-  String id;
-  String judul;
-  String keterangan;
-  String tanggal;
-  bool is_like;
-  String pembicara;
-
-  EventModel({
-    required this.id,
-    required this.judul,
-    required this.keterangan,
-    required this.tanggal,
-    required this.is_like,
-    required this.pembicara,
-  });
-
-  // Konversi dari DocumentSnapshot ke EventModel
-  factory EventModel.fromDocSnapshot(DocumentSnapshot doc) {
-    Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
-    return EventModel(
-      id: doc.id,
-      judul: data['judul'] ?? '',
-      keterangan: data['keterangan'] ?? '',
-      tanggal: data['tanggal'] ?? '',
-      is_like: data['is_like'] ?? false,
-      pembicara: data['pembicara'] ?? '',
-    );
-  }
-
-  // Konversi dari EventModel ke Map
-  Map<String, dynamic> toMap() {
-    return {
-      'judul': judul,
-      'keterangan': keterangan,
-      'tanggal': tanggal,
-      'is_like': is_like,
-      'pembicara': pembicara,
-    };
-  }
-}
-
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
@@ -117,7 +75,7 @@ class _MyHomeState extends State<MyHome> {
     }
 
     setState(() {
-      details.removeWhere((item) => item.is_like);
+      details.removeWhere((item) => selectedItems.contains(item));
     });
   }
 
@@ -182,10 +140,10 @@ class _MyHomeState extends State<MyHome> {
       ]),
     );
   }
-}
 
-String getRandString(int len) {
-  var random = Random.secure();
-  var values = List<int>.generate(len, (i) => random.nextInt(255));
-  return base64UrlEncode(values);
+  String getRandString(int len) {
+    var random = Random.secure();
+    var values = List<int>.generate(len, (i) => random.nextInt(255));
+    return base64UrlEncode(values);
+  }
 }
