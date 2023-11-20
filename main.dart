@@ -2,9 +2,65 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fab_circular_menu_plus/fab_circular_menu_plus.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
-import 'database.dart';
 import 'dart:convert';
 import 'dart:math';
+
+class EventModel {
+  String id;
+  String judul;
+  String keterangan;
+  String tanggal;
+  bool is_like;
+  String pembicara;
+
+  EventModel({
+    required this.id,
+    required this.judul,
+    required this.keterangan,
+    required this.tanggal,
+    required this.is_like,
+    required this.pembicara,
+  });
+
+  // Konversi dari DocumentSnapshot ke EventModel
+  factory EventModel.fromDocSnapshot(DocumentSnapshot doc) {
+    Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+    return EventModel(
+      id: doc.id,
+      judul: data['judul'] ?? '',
+      keterangan: data['keterangan'] ?? '',
+      tanggal: data['tanggal'] ?? '',
+      is_like: data['is_like'] ?? false,
+      pembicara: data['pembicara'] ?? '',
+    );
+  }
+
+  // Konversi dari EventModel ke Map
+  Map<String, dynamic> toMap() {
+    return {
+      'judul': judul,
+      'keterangan': keterangan,
+      'tanggal': tanggal,
+      'is_like': is_like,
+      'pembicara': pembicara,
+    };
+  }
+}
+
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp();
+  runApp(MyApp());
+}
+
+class MyApp extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      home: MyHome(),
+    );
+  }
+}
 
 class MyHome extends StatefulWidget {
   const MyHome({Key? key}) : super(key: key);
@@ -13,25 +69,11 @@ class MyHome extends StatefulWidget {
   State<MyHome> createState() => _MyHomeState();
 }
 
-Future testData() async {
-  await Firebase.initializeApp();
-  print('init Done');
-  FirebaseFirestore db = await FirebaseFirestore.instance;
-  print('init Firestore Done');
-
-  await db.collection('event_detail').get().then((event) {
-    for (var doc in event.docs) {
-      print("${doc.id} => ${doc.data()}");
-    }
-  });
-}
-
 class _MyHomeState extends State<MyHome> {
   List<EventModel> details = [];
 
-  Future readData() async {
-    await Firebase.initializeApp();
-    FirebaseFirestore db = await FirebaseFirestore.instance;
+  Future<void> readData() async {
+    FirebaseFirestore db = FirebaseFirestore.instance;
     var data = await db.collection('event_detail').get();
     setState(() {
       details =
@@ -40,23 +82,25 @@ class _MyHomeState extends State<MyHome> {
   }
 
   void addRand() async {
-    FirebaseFirestore db = await FirebaseFirestore.instance;
-    EventModel InsertData = EventModel(
-        judul: getRandString(5),
-        keterangan: getRandString(30),
-        tanggal: getRandString(10),
-        is_like: Random().nextBool(),
-        pembicara: getRandString(20));
+    FirebaseFirestore db = FirebaseFirestore.instance;
+    EventModel insertData = EventModel(
+      id: '',
+      judul: getRandString(5),
+      keterangan: getRandString(30),
+      tanggal: getRandString(10),
+      is_like: Random().nextBool(),
+      pembicara: getRandString(20),
+    );
     DocumentReference docRef =
-        await db.collection("event_detail").add(InsertData.toMap());
+        await db.collection("event_detail").add(insertData.toMap());
     setState(() {
-      InsertData.id = docRef.id;
-      details.add(InsertData);
+      insertData.id = docRef.id;
+      details.add(insertData);
     });
   }
 
   void deleteLast(String documentId) async {
-    FirebaseFirestore db = await FirebaseFirestore.instance;
+    FirebaseFirestore db = FirebaseFirestore.instance;
     await db.collection('event_detail').doc(documentId).delete();
     setState(() {
       details.removeLast();
@@ -64,24 +108,21 @@ class _MyHomeState extends State<MyHome> {
   }
 
   void deleteSelected() async {
-    FirebaseFirestore db = await FirebaseFirestore.instance;
+    FirebaseFirestore db = FirebaseFirestore.instance;
+    List<EventModel> selectedItems =
+        details.where((item) => item.is_like).toList();
 
-    // Filter items yang dicentang
-    List<EventModel> selectedItems = details.where((item) => item.is_like).toList();
-
-    // Hapus item yang dicentang dari Firestore
     for (var item in selectedItems) {
       await db.collection('event_detail').doc(item.id).delete();
     }
 
-    // Perbarui state untuk menghilangkan item yang dicentang dari UI
     setState(() {
       details.removeWhere((item) => item.is_like);
     });
   }
 
   void updateEvent(int pos) async {
-    FirebaseFirestore db = await FirebaseFirestore.instance;
+    FirebaseFirestore db = FirebaseFirestore.instance;
     await db
         .collection('event_detail')
         .doc(details[pos].id)
@@ -97,8 +138,8 @@ class _MyHomeState extends State<MyHome> {
     super.initState();
   }
 
+  @override
   Widget build(BuildContext context) {
-    testData();
     return Scaffold(
       appBar: AppBar(title: Text("Cloud Firestore")),
       body: ListView.builder(
@@ -119,17 +160,19 @@ class _MyHomeState extends State<MyHome> {
       ),
       floatingActionButton: FabCircularMenuPlus(children: <Widget>[
         IconButton(
-            onPressed: () {
-              addRand();
-            },
-            icon: Icon(Icons.add)),
+          onPressed: () {
+            addRand();
+          },
+          icon: Icon(Icons.add),
+        ),
         IconButton(
-            onPressed: () {
-              if (details.last.id != null) {
-                deleteLast(details.last.id!);
-              }
-            },
-            icon: Icon(Icons.minimize)),
+          onPressed: () {
+            if (details.last.id != null) {
+              deleteLast(details.last.id!);
+            }
+          },
+          icon: Icon(Icons.minimize),
+        ),
         IconButton(
           onPressed: () {
             deleteSelected();
@@ -139,4 +182,10 @@ class _MyHomeState extends State<MyHome> {
       ]),
     );
   }
+}
+
+String getRandString(int len) {
+  var random = Random.secure();
+  var values = List<int>.generate(len, (i) => random.nextInt(255));
+  return base64UrlEncode(values);
 }
